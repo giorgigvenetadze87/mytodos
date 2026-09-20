@@ -11,17 +11,15 @@ st.set_page_config(page_title="My ToDo List", page_icon="📝", layout="wide")
 st.markdown(
     """
 <style>
-    div[data-testid="stVerticalBlock"] > div {
-        gap: 0.35rem !important;
-    }
     div.stButton > button[kind="primary"] {
         background-color: #28a745 !important;
         color: white !important;
         border-color: #28a745 !important;
         border-radius: 6px;
-        padding: 4px 12px;
+        padding: 6px 14px;
         font-weight: 600;
-        font-size: 13px;
+        font-size: 14px;
+        margin-top: 5px;
     }
     div.stButton > button[kind="primary"]:hover {
         background-color: #218838 !important;
@@ -29,28 +27,23 @@ st.markdown(
         color: white !important;
     }
     div.stButton > button[kind="secondary"] {
-        padding: 4px 10px;
+        padding: 6px 12px;
         font-size: 13px;
         border-radius: 6px;
-    }
-    hr {
-        margin: 6px 0px 8px 0px !important;
-        border: 0;
-        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        margin-top: 5px;
     }
 </style>
 """,
     unsafe_allow_html=True,
 )
 
-# სათაური ცენტრში (შუაში)
+# სათაური ცენტრში
 st.markdown(
-    "<h2 style='text-align: center; margin-bottom: 20px;'>📝 My ToDo List</h2>",
+    "<h2 style='text-align: center; margin-bottom: 25px;'>📝 My ToDo List</h2>",
     unsafe_allow_html=True,
 )
 
 DB_FILE = "todos_db.json"
-
 CATEGORIES = [
     "🏢 სამსახური",
     "👨‍👩‍👧 ოჯახი",
@@ -58,10 +51,19 @@ CATEGORIES = [
     "🔄 ყოველთვიური დავალება",
     "📌 სხვა",
 ]
+WEEKDAYS_GE = {
+    0: "ორშაბათი",
+    1: "სამშაბათი",
+    2: "ოთხშაბათი",
+    3: "ხუთშაბათი",
+    4: "პარასკევი",
+    5: "შაბათი",
+    6: "კვირა",
+}
 
 
 # -------------------------------------------------------------
-# 2. ბაზასთან მუშაობის ფუნქციები (JSON Persistence)
+# 2. ბაზასთან მუშაობის ფუნქციები
 # -------------------------------------------------------------
 def load_todos() -> list[dict]:
     if not os.path.exists(DB_FILE):
@@ -89,7 +91,7 @@ if "todos" not in st.session_state:
 
 
 # -------------------------------------------------------------
-# 3. ახალი დავალების დამატების ფორმა (განახლებული სტრუქტურა)
+# 3. ახალი დავალების დამატების ფორმა
 # -------------------------------------------------------------
 st.markdown("#### ➕ ახალი დავალების დამატება")
 
@@ -102,14 +104,8 @@ with st.form("add_task_form", clear_on_submit=True):
         )
 
     with col_cat:
-        # კატეგორიების ველი
         task_category = st.selectbox("აირჩიეთ კატეგორია", CATEGORIES)
-
-        # 🎯 დედლაინის ველი: კომპაქტური, default=None (ცარიელი), ზუსტად კატეგორიის ქვემოთ
-        deadline_date = st.date_input(
-            "დედლაინი (არასავალდებულო)",
-            value=None,
-        )
+        deadline_date = st.date_input("დედლაინი (არასავალდებულო)", value=None)
 
     st.write("")
     _, col_btn_sub, _ = st.columns([2.5, 1.5, 2.5])
@@ -127,7 +123,6 @@ with st.form("add_task_form", clear_on_submit=True):
                 "title": task_title.strip(),
                 "category": task_category,
                 "created_at": now_str,
-                # თუ თარიღი არ აირჩა, შეინახება როგორც None (დაბალი პრიორიტეტი)
                 "deadline": (
                     deadline_date.strftime("%Y-%m-%d")
                     if deadline_date is not None
@@ -149,79 +144,68 @@ st.divider()
 
 
 # -------------------------------------------------------------
-# 4. დამხმარე ფუნქცია: კვირის დღის ამოცნობა და დედლაინის ბეიჯი
+# 4. დამხმარე ფუნქციები
 # -------------------------------------------------------------
-WEEKDAYS_GE = {
-    0: "ორშაბათი",
-    1: "სამშაბათი",
-    2: "ოთხშაბათი",
-    3: "ხუთშაბათი",
-    4: "პარასკევი",
-    5: "შაბათი",
-    6: "კვირა",
-}
-
-
 def get_deadline_badge(deadline_str: str):
-    """ითვლის დედლაინს და აბრუნებს თარიღს კვირის დღესთან ერთად."""
+    """ითვლის დედლაინს და აბრუნებს სტატუსის ბეიჯს."""
     if not deadline_str:
         return (
-            "<span style='background-color: #2e7d32; color: white; padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 600;'>🟢 დაბალი პრიორიტეტი</span>",
+            "<span style='background-color: #2e7d32; color: white; padding: 4px 10px; border-radius: 5px; font-size: 11px; font-weight: 600;'>🟢 დაბალი პრიორიტეტი</span>",
             "სტატუსი:",
         )
 
     today = date.today()
-    d_date = datetime.strptime(deadline_str, "%Y-%m-%d").date()
-    days_left = (d_date - today).days
-
-    # 🎯 იგებს კვირის დღეს ქართულად (მაგ: ორშაბათი, სამშაბათი...)
-    day_name = WEEKDAYS_GE[d_date.weekday()]
+    try:
+        d_date = datetime.strptime(deadline_str, "%Y-%m-%d").date()
+        days_left = (d_date - today).days
+        day_name = WEEKDAYS_GE[d_date.weekday()]
+    except Exception:
+        return "", f"📅 {deadline_str}"
 
     if days_left < 0:
         badge = (
-            f"<span style='background-color: #b71c1c; color: white; padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 600;'>"
+            f"<span style='background-color: #b71c1c; color: white; padding: 4px 10px; border-radius: 5px; font-size: 11px; font-weight: 600;'>"
             f"🚨 ვადაგადაცილებული ({abs(days_left)} დღით!)</span>"
         )
     elif days_left == 0:
         badge = (
-            f"<span style='background-color: #e65100; color: white; padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 600;'>"
+            f"<span style='background-color: #e65100; color: white; padding: 4px 10px; border-radius: 5px; font-size: 11px; font-weight: 600;'>"
             f"🔥 დღესაა დედლაინი!</span>"
         )
     elif days_left <= 3:
         badge = (
-            f"<span style='background-color: #d32f2f; color: white; padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 600;'>"
+            f"<span style='background-color: #d32f2f; color: white; padding: 4px 10px; border-radius: 5px; font-size: 11px; font-weight: 600;'>"
             f"🔴 დარჩა {days_left} დღე!</span>"
         )
     else:
         badge = (
-            f"<span style='background-color: #0288d1; color: white; padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 600;'>"
+            f"<span style='background-color: #0288d1; color: white; padding: 4px 10px; border-radius: 5px; font-size: 11px; font-weight: 600;'>"
             f"⏳ დარჩა {days_left} დღე</span>"
         )
 
-    # 🎯 გამოიტანს თარიღს და კვირის დღეს (მაგ: 📅 2026-03-30 (ორშაბათი))
     return badge, f"📅 {deadline_str} ({day_name})"
 
 
 def render_active_task(task: dict, prefix: str):
-    """გამოაქვს აქტიური დავალება მცირე შრიფტითა და მჭიდრო დაშორებით."""
+    """გამოაქვს აქტიური დავალება."""
     task_id = task["id"]
     badge, deadline_header = get_deadline_badge(task["deadline"])
 
-    col_content, col_status, col_btn = st.columns([0.52, 0.32, 0.16])
+    col_content, col_status, col_btn = st.columns([0.45, 0.37, 0.18])
 
     with col_content:
         st.markdown(
-            f"<div style='font-size: 16px; font-weight: 600; margin-bottom: 2px; line-height: 1.2;'>{task['title']}</div>",
+            f"<div style='font-size: 16px; font-weight: 600; margin-bottom: 2px; color: #ffffff;'>{task['title']}</div>",
             unsafe_allow_html=True,
         )
         st.markdown(
-            f"<div style='font-size: 12px; color: #888888;'>🏷️ <code>{task.get('category', '📌 სხვა')}</code> | 🕒 {task['created_at']}</div>",
+            f"<div style='font-size: 12px; color: #9aa0a6;'>🏷️ <code>{task.get('category', '📌 სხვა')}</code> | 🕒 {task['created_at']}</div>",
             unsafe_allow_html=True,
         )
 
     with col_status:
         st.markdown(
-            f"<div style='text-align: center; font-size: 12px; line-height: 1.4; margin-top: 2px;'>"
+            f"<div style='text-align: center; font-size: 12px; line-height: 1.5;'>"
             f"<b>{deadline_header}</b><br>{badge}</div>",
             unsafe_allow_html=True,
         )
@@ -238,21 +222,24 @@ def render_active_task(task: dict, prefix: str):
             save_todos(st.session_state.todos)
             st.rerun()
 
-    st.markdown("<hr>", unsafe_allow_html=True)
+    st.markdown(
+        "<hr style='margin: 8px 0; border: 0; border-top: 1px solid rgba(255, 255, 255, 0.08);'>",
+        unsafe_allow_html=True,
+    )
 
 
 def render_completed_task(task: dict, prefix: str):
-    """გამოაქვს შესრულებული დავალება მჭიდროდ."""
+    """გამოაქვს შესრულებული დავალება."""
     task_id = task["id"]
-    col_content, col_del = st.columns([0.84, 0.16])
+    col_content, col_del = st.columns([0.82, 0.18])
 
     with col_content:
         st.markdown(
-            f"<div style='font-size: 15px; text-decoration: line-through; color: #777; margin-bottom: 2px;'>{task['title']}</div>",
+            f"<div style='font-size: 15px; text-decoration: line-through; color: #888;'>{task['title']}</div>",
             unsafe_allow_html=True,
         )
         st.markdown(
-            f"<div style='font-size: 12px; color: #888888;'>🏷️ <code>{task.get('category', '📌 სხვა')}</code> | 🕒 შექმნა: {task['created_at']} | ✅ <b>შესრულდა:</b> {task['completed_at']}</div>",
+            f"<div style='font-size: 12px; color: #666;'>🏷️ <code>{task.get('category', '📌 სხვა')}</code> | 🕒 შექმნა: {task['created_at']} | ✅ <b>შესრულდა:</b> {task['completed_at']}</div>",
             unsafe_allow_html=True,
         )
 
@@ -266,30 +253,39 @@ def render_completed_task(task: dict, prefix: str):
             save_todos(st.session_state.todos)
             st.rerun()
 
-    st.markdown("<hr>", unsafe_allow_html=True)
+    st.markdown(
+        "<hr style='margin: 8px 0; border: 0; border-top: 1px solid rgba(255, 255, 255, 0.08);'>",
+        unsafe_allow_html=True,
+    )
 
 
 def render_monthly_task(task: dict):
-    """გამოაქვს ყოველთვიური დავალება მჭიდროდ წაშლის ღილაკით."""
+    """გამოაქვს ყოველთვიური დავალება (მხოლოდ სუფთა რიცხვითი თარიღით)."""
     task_id = task["id"]
-    badge, deadline_header = get_deadline_badge(task["deadline"])
+    deadline_str = task.get("deadline")
 
-    col_content, col_status, col_del = st.columns([0.52, 0.32, 0.16])
+    # 🎯 მხოლოდ სუფთა თარიღი (მაგ: 📅 2026-09-19):
+    if deadline_str:
+        date_display = f"📅 <b>{deadline_str}</b>"
+    else:
+        date_display = "<span style='color: #888888;'>დედლაინის გარეშე</span>"
+
+    col_content, col_status, col_del = st.columns([0.45, 0.37, 0.18])
 
     with col_content:
         st.markdown(
-            f"<div style='font-size: 16px; font-weight: 600; margin-bottom: 2px; line-height: 1.2;'>🔄 {task['title']}</div>",
+            f"<div style='font-size: 16px; font-weight: 600; margin-bottom: 2px; color: #ffffff;'>🔄 {task['title']}</div>",
             unsafe_allow_html=True,
         )
         st.markdown(
-            f"<div style='font-size: 12px; color: #888888;'>🏷️ <code>{task.get('category', '🔄 ყოველთვიური დავალება')}</code> | 🕒 {task['created_at']}</div>",
+            f"<div style='font-size: 12px; color: #9aa0a6;'>🏷️ <code>{task.get('category', '🔄 ყოველთვიური დავალება')}</code> | 🕒 {task['created_at']}</div>",
             unsafe_allow_html=True,
         )
 
     with col_status:
+        # გამოაქვს მხოლოდ სუფთა თარიღი
         st.markdown(
-            f"<div style='text-align: center; font-size: 12px; line-height: 1.4; margin-top: 2px;'>"
-            f"<b>{deadline_header}</b><br>{badge}</div>",
+            f"<div style='text-align: center; font-size: 13px; margin-top: 6px;'>{date_display}</div>",
             unsafe_allow_html=True,
         )
 
@@ -303,24 +299,44 @@ def render_monthly_task(task: dict):
             save_todos(st.session_state.todos)
             st.rerun()
 
-    st.markdown("<hr>", unsafe_allow_html=True)
+    st.markdown(
+        "<hr style='margin: 8px 0; border: 0; border-top: 1px solid rgba(255, 255, 255, 0.08);'>",
+        unsafe_allow_html=True,
+    )
 
 
 # -------------------------------------------------------------
-# 5. შესასრულებელი დავალებები (სტანდარტული კატეგორიები)
+# 5. შესასრულებელი დავალებები (🎯 სორტირება დარჩენილი დღეებით)
 # -------------------------------------------------------------
 st.markdown("#### 📌 შესასრულებელი დავალებები")
 
-standard_active = [
+today_date = date.today()
+
+
+# 🎯 დარჩენილი დღეების მათემატიკური დათვლა სორტირებისთვის:
+def sort_by_days_left(task):
+    dl = task.get("deadline")
+    if dl:
+        try:
+            task_d = datetime.strptime(dl.strip(), "%Y-%m-%d").date()
+            # აბრუნებს ზუსტ რიცხვს: -1 (ვადაგადაცილებული), 0 (დღეს), 1 დღე, 2 დღე, 5 დღე...
+            return (0, (task_d - today_date).days)
+        except Exception:
+            pass
+    return (1, 999999)  # უდედლაინოები გადადის სულ ბოლოში
+
+
+# 1. ვფილტრავთ აქტიურ დავალებებს
+raw_active = [
     t
     for t in st.session_state.todos
     if not t["is_completed"]
-    and t.get("category") != "🔄 ყოველთვიური დავალება"
     and not t.get("is_monthly", False)
+    and t.get("category") != "🔄 ყოველთვიური დავალება"
 ]
 
-# 🎯 სორტირება: უახლოესი დედლაინები თავში, ხოლო დედლაინის გარეშე (None) სულ ბოლოში:
-standard_active.sort(key=lambda t: t.get("deadline") or "9999-12-31")
+# 2. 🎯 ვალაგებთ რიცხვით: 1 დღე -> 2 დღე -> 5 დღე -> უდედლაინო (ბოლოში)
+standard_active = sorted(raw_active, key=sort_by_days_left)
 
 STANDARD_TABS = ["🏢 სამსახური", "👨‍👩‍👧 ოჯახი", "👤 პირადი", "📌 სხვა"]
 
@@ -329,10 +345,12 @@ if not standard_active:
 else:
     tabs = st.tabs(["🌐 ყველა"] + STANDARD_TABS)
 
+    # 'ყველა' ჩანართში გამოდის დალაგებული სია
     with tabs[0]:
         for t in standard_active:
             render_active_task(t, prefix="all")
 
+    # თითოეულ კატეგორიაშიც გამოდის დალაგებული სია
     for idx, cat_name in enumerate(STANDARD_TABS, start=1):
         with tabs[idx]:
             cat_tasks = [
@@ -346,21 +364,24 @@ else:
             else:
                 st.caption(f"კატეგორიაში '{cat_name}' დავალებები არ არის.")
 
-st.divider()
-
 # -------------------------------------------------------------
-# 6. შესრულებული დავალებები
+# 6. შესრულებული დავალებები (უახლესიდან ძველისკენ)
 # -------------------------------------------------------------
 st.markdown("#### ✅ შესრულებული დავალებები")
 
-completed_todos = [
+raw_completed = [
     t
     for t in st.session_state.todos
-    if t["is_completed"] and t.get("category") != "🔄 ყოველთვიური დავალება"
+    if t["is_completed"]
+    and not t.get("is_monthly", False)
+    and t.get("category") != "🔄 ყოველთვიური დავალება"
 ]
 
-# 🎯 სორტირება: შესრულების დროით (უახლესი ზემოთ):
-completed_todos.sort(key=lambda t: t.get("completed_at") or "", reverse=True)
+completed_todos = sorted(
+    raw_completed,
+    key=lambda t: t.get("completed_at") or t.get("created_at") or "",
+    reverse=True,
+)
 
 if not completed_todos:
     st.caption("შესრულებული დავალებების სია ჯერ ცარიელია.")
@@ -389,21 +410,27 @@ else:
 st.divider()
 
 # -------------------------------------------------------------
-# 7. ყოველთვიური დავალებები (უახლესიდან ძველისკენ)
+# 7. ყოველთვიური დავალებები (უახლესიდან ძველისკენ, სტატუსების გარეშე)
 # -------------------------------------------------------------
 st.markdown("#### 🔄 ყოველთვიური დავალებები")
 
-monthly_todos = [
+
+def monthly_sort_key(task):
+    dt_str = task.get("deadline") or task.get("created_at") or ""
+    try:
+        return datetime.strptime(dt_str[:10], "%Y-%m-%d").date()
+    except Exception:
+        return date.min
+
+
+raw_monthly = [
     t
     for t in st.session_state.todos
     if t.get("category") == "🔄 ყოველთვიური დავალება"
     or t.get("is_monthly", False)
 ]
 
-# 🎯 სორტირება: უახლესი თარიღით ზემოთ:
-monthly_todos.sort(
-    key=lambda t: t.get("deadline") or t.get("created_at") or "", reverse=True
-)
+monthly_todos = sorted(raw_monthly, key=monthly_sort_key, reverse=True)
 
 if not monthly_todos:
     st.caption("ყოველთვიური რუტინული დავალებები ჯერ არ გაქვთ დამატებული.")
