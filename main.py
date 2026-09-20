@@ -149,10 +149,21 @@ st.divider()
 
 
 # -------------------------------------------------------------
-# 4. დამხმარე ფუნქციები დავალებების გამოსატანად
+# 4. დამხმარე ფუნქცია: კვირის დღის ამოცნობა და დედლაინის ბეიჯი
 # -------------------------------------------------------------
+WEEKDAYS_GE = {
+    0: "ორშაბათი",
+    1: "სამშაბათი",
+    2: "ოთხშაბათი",
+    3: "ხუთშაბათი",
+    4: "პარასკევი",
+    5: "შაბათი",
+    6: "კვირა",
+}
+
+
 def get_deadline_badge(deadline_str: str):
-    """ითვლის დედლაინს და აბრუნებს კომპაქტურ ბეიჯს."""
+    """ითვლის დედლაინს და აბრუნებს თარიღს კვირის დღესთან ერთად."""
     if not deadline_str:
         return (
             "<span style='background-color: #2e7d32; color: white; padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 600;'>🟢 დაბალი პრიორიტეტი</span>",
@@ -162,6 +173,9 @@ def get_deadline_badge(deadline_str: str):
     today = date.today()
     d_date = datetime.strptime(deadline_str, "%Y-%m-%d").date()
     days_left = (d_date - today).days
+
+    # 🎯 იგებს კვირის დღეს ქართულად (მაგ: ორშაბათი, სამშაბათი...)
+    day_name = WEEKDAYS_GE[d_date.weekday()]
 
     if days_left < 0:
         badge = (
@@ -184,7 +198,8 @@ def get_deadline_badge(deadline_str: str):
             f"⏳ დარჩა {days_left} დღე</span>"
         )
 
-    return badge, f"📅 {deadline_str}"
+    # 🎯 გამოიტანს თარიღს და კვირის დღეს (მაგ: 📅 2026-03-30 (ორშაბათი))
+    return badge, f"📅 {deadline_str} ({day_name})"
 
 
 def render_active_task(task: dict, prefix: str):
