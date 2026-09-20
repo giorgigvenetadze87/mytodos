@@ -319,6 +319,9 @@ standard_active = [
     and not t.get("is_monthly", False)
 ]
 
+# 🎯 სორტირება: უახლოესი დედლაინები თავში, ხოლო დედლაინის გარეშე (None) სულ ბოლოში:
+standard_active.sort(key=lambda t: t.get("deadline") or "9999-12-31")
+
 STANDARD_TABS = ["🏢 სამსახური", "👨‍👩‍👧 ოჯახი", "👤 პირადი", "📌 სხვა"]
 
 if not standard_active:
@@ -356,6 +359,9 @@ completed_todos = [
     if t["is_completed"] and t.get("category") != "🔄 ყოველთვიური დავალება"
 ]
 
+# 🎯 სორტირება: შესრულების დროით (უახლესი ზემოთ):
+completed_todos.sort(key=lambda t: t.get("completed_at") or "", reverse=True)
+
 if not completed_todos:
     st.caption("შესრულებული დავალებების სია ჯერ ცარიელია.")
 else:
@@ -383,7 +389,7 @@ else:
 st.divider()
 
 # -------------------------------------------------------------
-# 7. ყოველთვიური დავალებები (ცალკე გამოყოფილი ბლოკი)
+# 7. ყოველთვიური დავალებები (უახლესიდან ძველისკენ)
 # -------------------------------------------------------------
 st.markdown("#### 🔄 ყოველთვიური დავალებები")
 
@@ -393,6 +399,11 @@ monthly_todos = [
     if t.get("category") == "🔄 ყოველთვიური დავალება"
     or t.get("is_monthly", False)
 ]
+
+# 🎯 სორტირება: უახლესი თარიღით ზემოთ:
+monthly_todos.sort(
+    key=lambda t: t.get("deadline") or t.get("created_at") or "", reverse=True
+)
 
 if not monthly_todos:
     st.caption("ყოველთვიური რუტინული დავალებები ჯერ არ გაქვთ დამატებული.")
